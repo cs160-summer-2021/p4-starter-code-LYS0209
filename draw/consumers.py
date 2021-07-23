@@ -21,7 +21,7 @@ class DrawConsumer(WebsocketConsumer):
 
     # Receive message from WebSocket
     def receive(self, text_data):
-     
+
         # Send message to room group
         async_to_sync(self.channel_layer.group_send)(
             'all',

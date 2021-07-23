@@ -30,13 +30,13 @@
     var uidToPaths = [];
     var colors = ['red', 'blue', 'green', 'black', 'yellow', 'purple'];
 
-
     $.getJSON('/static/draw/vendor/material/material-colors.json', function(data){
         colors=Object.values(data).map(x=>Object.values(x)).flat();
         path.strokeColor = colors[uid % colors.length];
     });
     // getting the URL (you may want to use for Exercise 3)
-    var url = window.location.href;
+    //var url = window.location.href;
+    var sizeOfScreen = window.location.search;
 
     var socket = new WebSocket(
         'ws://' + window.location.host + '/ws/draw');
@@ -45,20 +45,23 @@
        path.add(event.point);
        // You may need to add code here if you want to pass any other information.
        socket.send("{\"x\" : " + event.point.x + ", \"y\" : " + event.point.y + ", \"uid\" : " + uid + "}" );
+       console.log("uid: " + uid + " color: " + uid % colors.length);
     }
 
-    socket.onmessage = function(receivedMessage) {
-        var received = JSON.parse(receivedMessage.data);
-        //console.log("Received: " + JSON.stringify(received));
-        // You will probably want to add some code here to draw more lines.
-        console.log("uid: " + received.uid + " " + received.uid % 6);
-        if (received.uid === uid) return;
-        if (uidToPaths[received.uid] === undefined) { // new uid
-            uidToPaths[received.uid] = new paper.Path();
-        }
-        uidToPaths[received.uid].add(new paper.Point(received.x, received.y));
-        uidToPaths[received.uid].strokeColor = colors[received.uid % colors.length];
+    if (sizeOfScreen === "?size=large") {
+        socket.onmessage = function(receivedMessage) {
+            var received = JSON.parse(receivedMessage.data);
 
+            // You will probably want to add some code here to draw more lines.
+            console.log("uid: " + received.uid + " color: " + received.uid % colors.length);
+            if (received.uid === uid) return;
+            if (uidToPaths[received.uid] === undefined) { // new uid
+                uidToPaths[received.uid] = new paper.Path();
+            }
+            uidToPaths[received.uid].add(new paper.Point(received.x, received.y));
+            uidToPaths[received.uid].strokeColor = colors[received.uid % colors.length];
+
+        }
     }
 
     socket.onclose = function(e) {
