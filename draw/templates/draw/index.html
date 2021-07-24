@@ -48,7 +48,6 @@
             background-color: #f5f5f5;
             display: flex;
             flex-wrap: wrap;
-            /* position: relative; */
             justify-content: center;
             padding-top: 10px;
             padding-bottom: 10px;
@@ -78,6 +77,7 @@
         #guessing-container {
             width: 20%;
             height: 600px;
+            background-color: lavender;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07),
             0 2px 4px rgba(0, 0, 0, 0.07),
             0 4px 8px rgba(0, 0, 0, 0.07),
@@ -87,11 +87,13 @@
         }
 
         #guesses-display {
-            background-color: lavender;
             height: 450px;
         }
 
         #input-group-container {
+            align-items: center;
+            height: 150px;
+            background-color: white;
             display: flex;
             justify-content: center;
         }
@@ -234,7 +236,7 @@
         getColorsCreatePalette();
 
         if (sizeOfScreen === "?size=guess") { // guess screen
-
+            $("#color-palette").hide();
 
             socket.onmessage = function (receivedMessage) {
                 let received = JSON.parse(receivedMessage.data);
@@ -251,6 +253,7 @@
             }
         } else if (sizeOfScreen === "?size=draw") { // draw screen
             CustomInteraction();
+            $("#input-group-container").hide();
 
             socket.onmessage = function (receivedMessage) {
                 let received = JSON.parse(receivedMessage.data);
@@ -264,6 +267,7 @@
             let text = ($('#guess-input').val()).toLowerCase();
             guessesFromUser.push(text);
             let type = 0;
+            console.log(guessesFromUser.length);
 
             if (guessesFromUser.length <= 4) { //still have chances
                 if (text === prompt) { // get correct answer
@@ -271,7 +275,7 @@
                 } else { // get wrong answer
                     type = 3;
                 }
-            } else if (guessesFromUser === 5) { // last chance
+            } else if (guessesFromUser.length === 5) { // last chance
                 if (text === prompt) { // get correct answer
                     type = 2;
                 } else { // get wrong answer, run out of chances
@@ -312,7 +316,7 @@
             <form id="guess-form">
                 <div class="form-group">
                     <label for="guess-input">Your Guess</label>
-                    <input class="form-control" id="guess-input" placeholder="GUESS">
+                    <input class="form-control" id="guess-input" placeholder="">
                 </div>
                 <button type="submit" class="btn btn-primary">Submit</button>
             </form>
