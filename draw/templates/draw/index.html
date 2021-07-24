@@ -6,6 +6,16 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>P4 Drawing</title>
 
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+          crossorigin="anonymous">
+
     <link rel="stylesheet" type="text/css" href="{% static 'draw/vendor/bootstrap/css/bootstrap.min.css' %}">
     <script type="text/javascript" src="{% static 'draw/vendor/jquery/jquery-3.3.1.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'draw/vendor/paper/paper-full.min.js' %}"></script>
@@ -17,7 +27,7 @@
 
         #myCanvas {
             width: 750px;
-            height: 750px;
+            height: 600px;
             padding-left: 0;
             padding-right: 0;
             background-color: white;
@@ -62,6 +72,24 @@
             border-style: solid;
         }
 
+        #guessing-container {
+            width: 200px;
+            height: 600px;
+            border-width: 1px;
+            border-style: solid;
+            border-color: black;
+        }
+
+        #guesses-display {
+            background-color: #6c757d;
+            width: 200px;
+            height: 450px;
+        }
+
+        #input-group-container {
+
+        }
+
     </style>
 
 </head>
@@ -81,12 +109,19 @@
         var socket = new WebSocket(
             'ws://' + window.location.host + '/ws/draw');
 
-        function printAndSendMessage(x, y, pathId, color) {
-            console.log("{\"pathId\" : " + pathId +
-                ", \"color\" : " + color + "}"
+        var guessesFromUser = [];
+        var prompt = "Berkeley";
+
+        function printAndSendMessage(x, y, pathId, color, type) {
+            console.log("{" +
+                "\"type\" : " + type +
+                ", \"pathId\" : " + pathId +
+                ", \"color\" : " + color +
+                "}"
             );
-            socket.send(
-                "{\"pathId\" : " + pathId +
+            socket.send("{" +
+                "\"type\" : " + type +
+                ", \"pathId\" : " + pathId +
                 ", \"color\" : " + color +
                 ", \"x\" : " + x +
                 ", \"y\" : " + y +
@@ -106,18 +141,18 @@
                 path.strokeColor = cp.history[cp.history.length - 1];
                 console.log(path.strokeColor);
                 path.add(event.point);
-                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor));
+                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor), 1);
             }
 
             tool.onMouseDrag = function (event) {
                 path.add(event.point);
-                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor));
+                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor), 1);
 
             }
 
             tool.onMouseUp = function (event) {
                 path.add(event.point);
-                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor));
+                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor), 1);
 
                 // when the path end, generate a new path id for the next path
                 pathId = parseInt(Math.random() * 1000000);
@@ -158,16 +193,51 @@
         if (sizeOfScreen === "?size=large") {
             socket.onmessage = function (receivedMessage) {
                 var received = JSON.parse(receivedMessage.data);
-                //console.log(received);
+                var typeOfMessage = received.type;
+                console.log(typeOfMessage);
 
-                if (pathIdToPaths[received.pathId] === undefined) { // new pathId
-                    pathIdToPaths[received.pathId] = new paper.Path();
+                if (typeOfMessage === 1) { // the message is about drawing
+                    if (pathIdToPaths[received.pathId] === undefined) { // new pathId
+                        pathIdToPaths[received.pathId] = new paper.Path();
+                    }
+                    pathIdToPaths[received.pathId].add(new paper.Point(received.x, received.y));
+                    var colorReceived = new paper.Color(received.color[1], received.color[2], received.color[3]);
+                    pathIdToPaths[received.pathId].strokeColor = colorReceived;
+                } else if (typeOfMessage === 2) { // the message is about guessing
+
                 }
-                pathIdToPaths[received.pathId].add(new paper.Point(received.x, received.y));
-                var colorReceived = new paper.Color(received.color[1],received.color[2],received.color[3]);
-                pathIdToPaths[received.pathId].strokeColor = colorReceived;
-                //console.log(colorReceived);
+
+
             }
+        }
+
+        document.getElementById('guess-form').onsubmit = function () {
+            let text = document.getElementById('guess-input').value;
+            guessesFromUser.push(text);
+            if (guessesFromUser.length <= 5) {
+                console.log(guessesFromUser);
+                if (text === prompt) { // get the correct answer
+                    $('#guesses-display').append('  <div class="card">\n' +
+                        '                <div class="card-body">\n' +
+                        '                 success: ' + text +
+                        '                </div>\n' +
+                        '            </div>');
+                } else { // does not get the correct answer
+                    $('#guesses-display').append('  <div class="card">\n' +
+                        '                <div class="card-body">\n' +
+                        '                 failed: ' + text +
+                        '                </div>\n' +
+                        '            </div>');
+                }
+            } else { // run out of chances
+                $('#guesses-display').append('  <div class="card">\n' +
+                    '                <div class="card-body">\n' +
+                    '                   You used all your chance\n' +
+                    '                </div>\n' +
+                    '            </div>');
+            }
+
+            return false;
         }
 
         socket.onclose = function (e) {
@@ -178,9 +248,32 @@
 
 </script>
 <body>
+
+<!-- Popper.js, Bootstrap JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
 <div id="containerOfAll">
     <div id="color-palette"></div>
     <canvas id="myCanvas"></canvas>
+    <div id="guessing-container">
+        <div id="guesses-display">
+        </div>
+        <div id="input-group-container">
+            <form id="guess-form">
+                <div class="form-group">
+                    <label for="guess-input">Your Guess</label>
+                    <input class="form-control" id="guess-input" placeholder="GUESS">
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+    </div>
 </div>
+
 </body>
 </html>
