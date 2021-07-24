@@ -11,91 +11,176 @@
     <script type="text/javascript" src="{% static 'draw/vendor/paper/paper-full.min.js' %}"></script>
 
     <style type="text/css">
-    #myCanvas {
-        width: 750px;
-        height: 750px;
-        padding-left: 0;
-        padding-right: 0;
-        background-color: white;
-        box-shadow:
-                0 1px 2px rgba(0,0,0,0.07),
-                0 2px 4px rgba(0,0,0,0.07),
-                0 4px 8px rgba(0,0,0,0.07),
-                0 8px 16px rgba(0,0,0,0.07),
-                0 16px 32px rgba(0,0,0,0.07),
-                0 32px 64px rgba(0,0,0,0.07);
-    }
+        #containerOfAll {
+            display: flex;
+        }
 
+        #myCanvas {
+            width: 750px;
+            height: 750px;
+            padding-left: 0;
+            padding-right: 0;
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07),
+            0 2px 4px rgba(0, 0, 0, 0.07),
+            0 4px 8px rgba(0, 0, 0, 0.07),
+            0 8px 16px rgba(0, 0, 0, 0.07),
+            0 16px 32px rgba(0, 0, 0, 0.07),
+            0 32px 64px rgba(0, 0, 0, 0.07);
+        }
+
+        #color-palette {
+            width: 50px;
+            height: 600px;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-wrap: wrap;
+            /* position: relative; */
+            justify-content: center;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07),
+            0 2px 4px rgba(0, 0, 0, 0.07),
+            0 4px 8px rgba(0, 0, 0, 0.07),
+            0 8px 16px rgba(0, 0, 0, 0.07),
+            0 16px 32px rgba(0, 0, 0, 0.07),
+            0 32px 64px rgba(0, 0, 0, 0.07);
+        }
+
+        .swatch {
+            width: 24px;
+            height: 24px;
+            -moz-border-radius: 12px;
+            -webkit-border-radius: 12px;
+            border-radius: 12px;
+            margin: 3px;
+        }
+
+        .activated.swatch {
+            border-width: 2px;
+            margin: 1.5px !important;
+            border-style: solid;
+        }
 
     </style>
 
 </head>
-<body>
-    <!-- You may change the dimensions of this canvas -->
-    <div>
-        <div>
-            <div></div>
-        </div>
-        <canvas id="myCanvas"></canvas>
-    </div>
-
-</body>
 <script>
-    var canvas = document.getElementById('myCanvas');
-    paper.setup(canvas);
-    var uid = Date.now() % 10000;
-    var uidToPaths = [];
-    var colors = ['red', 'blue', 'green', 'black', 'yellow', 'purple'];
-    var sizeOfScreen = window.location.search;
-    var socket = new WebSocket(
-        'ws://' + window.location.host + '/ws/draw');
+    window.onload = function () {
+        var canvas = document.getElementById('myCanvas');
+        paper.setup(canvas);
 
-    // let the user click to draw a line
-    function CustomInteraction() {
-        var path = new paper.Path();
-        var tool = new paper.Tool();
+        var pathIdToPaths = [];
 
-        $.getJSON('/static/draw/vendor/material/material-colors.json', function(data){
-            colors = Object.values(data).map(x=>Object.values(x)).flat();
-            path.strokeColor = colors[uid % colors.length];
-        });
+        var cp = {
+            history: ["#f44336"], // red selected by default
+            options: [],
+            $container: $('#color-palette')
+        }
+        var sizeOfScreen = window.location.search;
+        var socket = new WebSocket(
+            'ws://' + window.location.host + '/ws/draw');
 
-        tool.onMouseDown = function(event) {
-            path = new paper.Path();
-            path.strokeColor = colors[uid % colors.length];
-            path.add(event.point);
-            socket.send("{\"x\" : " + event.point.x + ", \"y\" : " + event.point.y + ", \"uid\" : " + uid + "}" );
+        function printAndSendMessage(x, y, pathId, color) {
+            console.log("{\"pathId\" : " + pathId +
+                ", \"color\" : " + color + "}"
+            );
+            socket.send(
+                "{\"pathId\" : " + pathId +
+                ", \"color\" : " + color +
+                ", \"x\" : " + x +
+                ", \"y\" : " + y +
+                "}"
+            );
         }
 
-        tool.onMouseDrag = function(event) {
-            path.add(event.point);
-            socket.send("{\"x\" : " + event.point.x + ", \"y\" : " + event.point.y + ", \"uid\" : " + uid + "}" );
-        }
+        // let the user click to draw a line
+        function CustomInteraction() {
+            var pathId = parseInt(Math.random() * 1000000);
+            var path = new paper.Path();
+            var tool = new paper.Tool();
 
-        tool.onMouseUp = function(event) {
-            path.add(event.point);
-            socket.send("{\"x\" : " + event.point.x + ", \"y\" : " + event.point.y + ", \"uid\" : " + uid + "}" );
-        }
-    }
+            tool.onMouseDown = function (event) {
 
-    CustomInteraction();
-
-    if (sizeOfScreen === "?size=large") {
-        socket.onmessage = function(receivedMessage) {
-            var received = JSON.parse(receivedMessage.data);
-
-            if (received.uid === uid) return;
-            if (uidToPaths[received.uid] === undefined) { // new uid
-                uidToPaths[received.uid] = new paper.Path();
+                path = new paper.Path();
+                path.strokeColor = cp.history[cp.history.length - 1];
+                console.log(path.strokeColor);
+                path.add(event.point);
+                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor));
             }
-            uidToPaths[received.uid].add(new paper.Point(received.x, received.y));
-            uidToPaths[received.uid].strokeColor = colors[received.uid % colors.length];
+
+            tool.onMouseDrag = function (event) {
+                path.add(event.point);
+                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor));
+
+            }
+
+            tool.onMouseUp = function (event) {
+                path.add(event.point);
+                printAndSendMessage(event.point.x, event.point.y, pathId, JSON.stringify(path.strokeColor));
+
+                // when the path end, generate a new path id for the next path
+                pathId = parseInt(Math.random() * 1000000);
+            }
         }
+
+        CustomInteraction();
+
+        function createColorPalette(colors) {
+            for (let i = colors.length - 1; i >= 0; i--) {
+                var $swatch = $("<div>").css("background-color", colors[i])
+                    .addClass("swatch");
+                $swatch.click(function () {
+                    // add color to the color palette history
+                    cp.history.push($(this).css("background-color"));
+                    $('.swatch.activated').removeClass('activated');
+                    $(this).addClass('activated');
+                });
+                cp.$container.append($swatch);
+            }
+            $(".swatch").first().addClass('activated');
+        }
+
+        function getColorsCreatePalette() {
+            cp.$container.html(" ");
+            $.getJSON('/static/draw/vendor/material/material-colors.json', function (colors) {
+                var keys = Object.keys(colors);
+                for (var i = keys.length - 1; i >= 0; i--) {
+                    cp.options.push(colors[keys[i]][500]);
+                }
+                createColorPalette(cp.options);
+            });
+        }
+
+        getColorsCreatePalette();
+
+
+        if (sizeOfScreen === "?size=large") {
+            socket.onmessage = function (receivedMessage) {
+                var received = JSON.parse(receivedMessage.data);
+                //console.log(received);
+
+                if (pathIdToPaths[received.pathId] === undefined) { // new pathId
+                    pathIdToPaths[received.pathId] = new paper.Path();
+                }
+                pathIdToPaths[received.pathId].add(new paper.Point(received.x, received.y));
+                var colorReceived = new paper.Color(received.color[1],received.color[2],received.color[3]);
+                pathIdToPaths[received.pathId].strokeColor = colorReceived;
+                //console.log(colorReceived);
+            }
+        }
+
+        socket.onclose = function (e) {
+            console.error('Chat socket closed unexpectedly');
+        };
     }
 
-    socket.onclose = function(e) {
-        console.error('Chat socket closed unexpectedly');
-    };
 
 </script>
+<body>
+<div id="containerOfAll">
+    <div id="color-palette"></div>
+    <canvas id="myCanvas"></canvas>
+</div>
+</body>
 </html>
