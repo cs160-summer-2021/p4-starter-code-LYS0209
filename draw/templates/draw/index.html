@@ -76,9 +76,14 @@
         }
 
         #guessing-container {
-            width: 60%;
+            width: 20%;
             height: 600px;
-            box-shadow: 1px 4px 4px 1px rgba(0, 0, 0, 0.29);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07),
+            0 2px 4px rgba(0, 0, 0, 0.07),
+            0 4px 8px rgba(0, 0, 0, 0.07),
+            0 8px 16px rgba(0, 0, 0, 0.07),
+            0 16px 32px rgba(0, 0, 0, 0.07),
+            0 32px 64px rgba(0, 0, 0, 0.07);
         }
 
         #guesses-display {
@@ -89,10 +94,6 @@
         #input-group-container {
             display: flex;
             justify-content: center;
-        }
-
-        .form-control {
-            width: 360px;
         }
 
     </style>
@@ -195,7 +196,7 @@
         getColorsCreatePalette();
 
 
-        if (sizeOfScreen === "?size=large") {
+        if (sizeOfScreen === "?size=guess") {
             socket.onmessage = function (receivedMessage) {
                 var received = JSON.parse(receivedMessage.data);
                 var typeOfMessage = received.type;
@@ -208,50 +209,118 @@
                     pathIdToPaths[received.pathId].add(new paper.Point(received.x, received.y));
                     var colorReceived = new paper.Color(received.color[1], received.color[2], received.color[3]);
                     pathIdToPaths[received.pathId].strokeColor = colorReceived;
-                } else if (typeOfMessage === 2) { // the message is about guessing
+                } else if (typeOfMessage === 2) { // get correct answer, win
+                    console.log("i get message");
+                } else if (typeOfMessage === 3) { // get wrong answer
+
+                } else if (typeOfMessage === 0) { // lose
 
                 }
-
-
             }
-        }
+        } else if (sizeOfScreen === "?size=draw") {
+            socket.onmessage = function (receivedMessage) {
+                var received = JSON.parse(receivedMessage.data);
+                var typeOfMessage = received.type;
+                console.log(typeOfMessage);
 
-        if (sizeOfScreen === "?size=draw") {
-            document.getElementById('guessing-container').style.display = "none";
-        }
-        if (sizeOfScreen === "?size=guess") {
-            document.getElementById('color-palette').style.display = "none";
-            document.getElementById('myCanvas').style.display = "none";
-        }
-
-        document.getElementById('guess-form').onsubmit = function () {
-            let text = document.getElementById('guess-input').value;
-            guessesFromUser.push(text);
-            if (guessesFromUser.length <= 5) {
-                console.log(guessesFromUser);
-                if (text.toLowerCase() === prompt.toLowerCase()) { // get the correct answer
+                if (typeOfMessage === 1) { // the message is about drawing
+                    return;
+                } else if (typeOfMessage === 2) { //
+                    let text = received.text;
                     $('#guesses-display').append('  <div class="card">\n' +
                         '                <div class="card-body">\n' +
                         '                 success: ' + text +
                         '                </div>\n' +
                         '            </div>');
-                } else { // does not get the correct answer
+                } else if (typeOfMessage === 3) { // get wrong answer
+                    let text = received.text;
+                    $('#guesses-display').append('  <div class="card">\n' +
+                        '                <div class="card-body">\n' +
+                        '                 failed: ' + text +
+                        '                </div>\n' +
+                        '            </div>');
+                } else if (typeOfMessage === 0) { // lose
+                    $('#guesses-display').append('  <div class="card">\n' +
+                        '                <div class="card-body">\n' +
+                        '                   You used all your chances\n' +
+                        '                </div>\n' +
+                        '            </div>');
+                }
+            }
+        }
+
+        $('#guess-form').submit(function () {
+            let text = $('#guess-input').val();
+            guessesFromUser.push(text);
+
+            if (guessesFromUser.length < 5) {
+
+                // display on the guess screen
+                if (text.toLowerCase() === prompt.toLowerCase()) { // get the correct answer
+
+                    // send a massage type 2, get correct answer
+                    socket.send("{" +
+                        "\"type\" : " + 2 +
+                        ", \"text\" : " + JSON.stringify(text) +
+                        "}"
+                    );
+
+                    console.log("{" +
+                        "\"type\" : " + 2 +
+                        ", \"text\" : " + JSON.stringify(text) +
+                        "}"
+                    );
+
+                    $('#guesses-display').append('  <div class="card">\n' +
+                        '                <div class="card-body">\n' +
+                        '                 success: ' + text +
+                        '                </div>\n' +
+                        '            </div>');
+                } else { // does not get the correct answer, we win
+
+                    // send a massage type 3, get wrong answer, go on
+                    socket.send("{" +
+                        "\"type\" : " + 3 +
+                        ", \"text\" : " + JSON.stringify(text) +
+                        "}"
+                    );
+
+                    console.log("{" +
+                        "\"type\" : " + 3 +
+                        ", \"text\" : " + JSON.stringify(text) +
+                        "}"
+                    );
+
                     $('#guesses-display').append('  <div class="card">\n' +
                         '                <div class="card-body">\n' +
                         '                 failed: ' + text +
                         '                </div>\n' +
                         '            </div>');
                 }
+
             } else { // run out of chances
+
+                // send others a message saying we lost
+                socket.send("{" +
+                    "\"type\" : " + 0 +
+                    ", \"text\" : " + JSON.stringify(text) +
+                    "}"
+                );
+
+                console.log("{" +
+                    "\"type\" : " + 0 +
+                    ", \"text\" : " + JSON.stringify(text) +
+                    "}"
+                );
+
                 $('#guesses-display').append('  <div class="card">\n' +
                     '                <div class="card-body">\n' +
                     '                   You used all your chances\n' +
                     '                </div>\n' +
                     '            </div>');
             }
-
             return false;
-        }
+        })
 
         socket.onclose = function (e) {
             console.error('Chat socket closed unexpectedly');
