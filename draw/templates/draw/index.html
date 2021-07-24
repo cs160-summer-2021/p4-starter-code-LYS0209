@@ -98,6 +98,11 @@
             justify-content: center;
         }
 
+        .alert {
+            height: 150px;
+            bottom: 0;
+        }
+
     </style>
 
 </head>
@@ -237,6 +242,7 @@
 
         if (sizeOfScreen === "?size=guess") { // guess screen
             $("#color-palette").hide();
+            $("#prompt").hide();
 
             socket.onmessage = function (receivedMessage) {
                 let received = JSON.parse(receivedMessage.data);
@@ -320,6 +326,11 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Submit</button>
             </form>
+        </div>
+        <div id="prompt">
+            <div class="alert alert-info" role="alert">
+                Prompt: </br><p style="font-size: 44px">berkeley</p>
+            </div>
         </div>
     </div>
 </div>
