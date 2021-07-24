@@ -23,10 +23,13 @@
     <style type="text/css">
         #containerOfAll {
             display: flex;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
         }
 
         #myCanvas {
-            width: 750px;
+            width: 718px;
             height: 600px;
             padding-left: 0;
             padding-right: 0;
@@ -73,21 +76,23 @@
         }
 
         #guessing-container {
-            width: 200px;
+            width: 60%;
             height: 600px;
-            border-width: 1px;
-            border-style: solid;
-            border-color: black;
+            box-shadow: 1px 4px 4px 1px rgba(0, 0, 0, 0.29);
         }
 
         #guesses-display {
-            background-color: #6c757d;
-            width: 200px;
+            background-color: lavender;
             height: 450px;
         }
 
         #input-group-container {
+            display: flex;
+            justify-content: center;
+        }
 
+        .form-control {
+            width: 360px;
         }
 
     </style>
@@ -211,12 +216,20 @@
             }
         }
 
+        if (sizeOfScreen === "?size=draw") {
+            document.getElementById('guessing-container').style.display = "none";
+        }
+        if (sizeOfScreen === "?size=guess") {
+            document.getElementById('color-palette').style.display = "none";
+            document.getElementById('myCanvas').style.display = "none";
+        }
+
         document.getElementById('guess-form').onsubmit = function () {
             let text = document.getElementById('guess-input').value;
             guessesFromUser.push(text);
             if (guessesFromUser.length <= 5) {
                 console.log(guessesFromUser);
-                if (text === prompt) { // get the correct answer
+                if (text.toLowerCase() === prompt.toLowerCase()) { // get the correct answer
                     $('#guesses-display').append('  <div class="card">\n' +
                         '                <div class="card-body">\n' +
                         '                 success: ' + text +
@@ -232,7 +245,7 @@
             } else { // run out of chances
                 $('#guesses-display').append('  <div class="card">\n' +
                     '                <div class="card-body">\n' +
-                    '                   You used all your chance\n' +
+                    '                   You used all your chances\n' +
                     '                </div>\n' +
                     '            </div>');
             }
@@ -258,6 +271,7 @@
         crossorigin="anonymous"></script>
 
 <div id="containerOfAll">
+
     <div id="color-palette"></div>
     <canvas id="myCanvas"></canvas>
     <div id="guessing-container">
